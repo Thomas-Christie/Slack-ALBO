@@ -1,3 +1,9 @@
+Ran ALBO with L-BFGS-B optimising the EI acquisition function at each iteration on
+the toy problem, with the objective treated as being *unknown* and modelled using a GP.
+
+Code for run can be found below.
+
+```
 library(laGP)
 library(jsonlite)
 library(glue)
@@ -22,5 +28,6 @@ for(x in 1:100) {
   out <- optim.auglag(aimprob, B, start=5, end=50, slack=2, fhat=TRUE, lambda=0)
   write_json(out, glue("results/lsq/slack_al_optim/data/run_{x}_results.json"), digits=NA)
 }
+```
 
 
