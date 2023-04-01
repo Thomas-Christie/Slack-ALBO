@@ -1,3 +1,11 @@
+Ran ALBO with L-BFGS-B optimising the EI acquisition function at each iteration on
+the GSBP, with the objective treated as being *unknown* and modelled using a GP.
+
+NOTE - This run used the author's (faulty) code for initialising penalty term.
+
+Code for run can be found below.
+
+```
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -61,3 +69,6 @@ for(x in 1:100) {
   ALslack <- optim.auglag(gsbpprob, B, equal=c(0,1,1), fhat=TRUE, urate=5, slack=2, ncandf=ncandf, start=10, end=150)
   write_json(ALslack, glue("results/gsbp/slack_al_optim/data/run_{x}_results.json"), digits=NA)
 }
+```
+
+
