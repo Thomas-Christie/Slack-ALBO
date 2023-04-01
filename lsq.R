@@ -19,8 +19,8 @@ B <- matrix(c(rep(0,2),rep(1,2)),ncol=2)
 
 for(x in 1:100) {
   ## run ALBO
-  out <- optim.auglag(aimprob, B, start=5, end=50, slack=2, fhat=TRUE, lambda=0)
-  write_json(out, glue("results/lsq/slack_al_optim/data/run_{x}_results.json"), digits=NA)
+  out <- optim.auglag(aimprob, B, start=5, end=50, slack=TRUE, fhat=TRUE, lambda=0)
+  write_json(out, glue("results/lsq/slack_al/data/run_{x}_results.json"), digits=NA)
 }
 
 
