@@ -1,3 +1,11 @@
+Ran ALBO without L-BFGS-B optimising the EI acquisition function at each iteration on
+the toy problem, with the objective treated as being *unknown* and modelled using a GP.
+
+NOTE - This run used the correct method for initialising the penalty parameter.
+
+Code for run can be found below.
+
+```
 library(laGP)
 library(jsonlite)
 library(glue)
@@ -5,6 +13,7 @@ library(R.utils)
 
 new_rho_update <- function (obj, C, equal, init = 10, ethresh = 0.1)
 {
+    print("Thomas Code")
     if (init > length(obj))
         init <- length(obj)
     if (length(obj) != nrow(C))
@@ -48,8 +57,12 @@ B <- matrix(c(rep(0,2),rep(1,2)),ncol=2)
 
 for(x in 1:100) {
   ## run ALBO
-  out <- optim.auglag(aimprob, B, start=5, end=50, slack=2, fhat=TRUE, lambda=0)
-  write_json(out, glue("results/lsq/updated_rho_slack_al_optim/data/run_{x}_results.json"), digits=NA)
+  out <- optim.auglag(aimprob, B, start=5, end=50, slack=TRUE, fhat=TRUE, lambda=0)
+  write_json(out, glue("results/lsq/updated_rho_slack_al/data/run_{x}_results.json"), digits=NA)
 }
+
+
+
+```
 
 
