@@ -1,3 +1,8 @@
+50 runs on Lockwood problem with no slack variables (stopped after 30 runs as this
+is the number of runs in original paper).
+
+``` 
+# NOTE - Ensure that R is run from the lockwood/runlock directory for this code to work.
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -5,6 +10,8 @@ library(jsonlite)
 library(glue)
 library(R.utils)
 library(tgp)
+
+source('runlock.R')
 
 new_rho_update <- function (obj, C, equal, init = 10, ethresh = 0.01)
 {
@@ -53,8 +60,6 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
   ## X <- lhs(start, B)
   X <- rbind(Xstart, X)
   start <- nrow(X)
-  print(glue("Start: {start}"))
-  print(X)
 
   ## first run to determine dimensionality of the constraint
   out <- fn(X[1,]*Bscale, ...)
@@ -149,17 +154,6 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
   ## iterating over the black box evaluations
   for(t in (start+1):end) {
-    # Check surrogate predictions at critical values
-    testLocs <- rbind(c(0.35262327, 0.45821539), c(0.94769, 0.46856))
-    for(j in 1:nc) {
-      # Cnorm[j] <- max(abs(C[,j]))
-      # Cgpi[j] <- newM(X, C[,j]/Cnorm[j], dg.start[1], dg.start[2])
-      p <- predGPsep(Cgpi[j], testLocs, lite=TRUE)
-      print("Mean")
-      print(p$mean)
-      print("Variance")
-      print(p$s2)
-    }
 
     ## lambda and rho update
     if(!slack) {  ## Original AL
@@ -178,7 +172,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
       } else { ## update if any valid has been found
         ck <- C[which.min(al),]
         lambda.new <- pmax(0, lambda + (1/rho) * ck)
-        if(any(ck[equal] > 0) || any(abs(ck[!equal]) > ethresh)) rho.new <- rho/2
+        if(any(ck[!equal] > 0) || any(abs(ck[equal]) > ethresh)) rho.new <- rho/2
         else rho.new <- rho
       }
 
@@ -266,7 +260,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     ncand <- ncandf(t)
     if(!is.finite(m2) || fhat)
       XX <- lhs(ncand, B)
-    else XX <- rbetter(ncand, B, sum(X[which(obj == m2)[1],]))
+    else XX <- laGP:::rbetter(ncand, B, sum(X[which(obj == m2)[1],]))
     ## NOTE: might be a version of rbetter for fhat
 
     ## calculate composite surrogate, and evaluate EI and/or EY
@@ -279,7 +273,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     else if(nzei <= 0.1*ncand) {
       if(!is.finite(m2) || fhat)
         XX <- rbind(XX, lhs(10*ncand, B))
-      else XX <- rbind(XX, rbetter(10*ncand, B, sum(X[which(obj == m2)[1],])))
+      else XX <- rbind(XX, laGP:::rbetter(10*ncand, B, sum(X[which(obj == m2)[1],])))
       eyei <- alM(XX[-(1:ncand),], fgpi, fnorm, Cgpi, Cnorm, lambda, 1/(2*rho), ybest,
                 slack, equal, N, fn, Bscale)
       eis <- c(eis, eyei$ei)
@@ -367,60 +361,14 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     lambda=as.matrix(lambdas), rho=as.numeric(rhos)))
 }
 
-goldstein.price <- function(X)
-{
-    if(is.null(nrow(X))) X <- matrix(X, nrow=1)
-    m <- 8.6928
-    s <- 2.4269
-    x1 <- 4 * X[,1] - 2
-    x2 <- 4 * X[,2] - 2
-    a <- 1 + (x1 + x2 + 1)^2 * (19 - 14 * x1 + 3 * x1^2 - 14 *
-        x2 + 6 * x1 * x2 + 3 * x2^2)
-    b <- 30 + (2 * x1 - 3 * x2)^2 * (18 - 32 * x1 + 12 * x1^2 +
-        48 * x2 - 36 * x1 * x2 + 27 * x2^2)
-    f <- log(a * b)
-    f <- (f - m)/s
-    return(f)
-}
-
-toy.c1 <- function(X) {
-  if (is.null(dim(X))) X <- matrix(X, nrow=1)
-  c1 <- 3/2 - X[,1] - 2*X[,2] - 0.5*sin(2*pi*(X[,1]^2 - 2*X[,2]))
-  return(cbind(c1, -apply(X, 1, branin) + 25))
-}
-
-parr <- function(X){
-  if (is.null(dim(X))) X <- matrix(X, nrow=1)
-  x1 <- (2 * X[,1] - 1)
-  x2 <- (2 * X[,2] - 1)
-  g <- (4-2.1*x1^2+1/3*x1^4)*x1^2 + x1*x2 + (-4+4*x2^2)*x2^2+3*sin(6*(1-x1)) + 3*sin(6*(1-x2))
-  return(-g+6)
-}
-
-gsbp.constraints <- function(x){
-  return(cbind(toy.c1(x), parr(x)-2))
-}
-
-## problem definition for AL
-gsbpprob <- function(X, known.only=FALSE)
-{
-  if(is.null(nrow(X))) X <- matrix(X, nrow=1)
-  if(known.only) stop("known.only not supported for this example")
-  f <- goldstein.price(X)
-  C <- gsbp.constraints(X)
-  return(list(obj=f, c=cbind(C[,1], C[,2]/100, C[,3]/10))) # Dividing by these constants isn't mentioned in Picheny et al. (https://arxiv.org/pdf/1605.09466.pdf)
-}
-
-## set bounding rectangle for aquisitions
-dim <- 2
-
-B <- matrix(c(rep(0,dim),rep(1,dim)),ncol=2)
+## set bounding rectangle for adaptive sampling
+B <- matrix(c(rep(0,6), rep(2,6)), ncol=2)
 
 ncandf <- function(t) { 1000 }
 
-out <- new_auglag(gsbpprob, B, equal=c(0,1,1), fhat=TRUE, urate=1, slack=2, ncandf=ncandf, start=10, end=150)
-# for(x in 1:100) {
-#   ## run ALBO
-#   out <- new_auglag(gsbpprob, B, equal=c(0,1,1), fhat=TRUE, urate=1, slack=2, ncandf=ncandf, start=10, end=150)
-#   write_json(out, glue("results/gsbp/slack_al_optim_correct_rho_update_urate_one/data/run_{x}_results.json"), digits=NA)
-# }
+for(x in 1:50) {
+  ## run ALBO
+  out <- new_auglag(runlock, B, Bscale=10000, start=30, end=510, slack=FALSE, fhat=FALSE, lambda=0, urate=1)
+  write_json(out, glue("../../results/lockwood/no_slack/data/run_{x}_results.json"), digits=NA)
+}
+```
