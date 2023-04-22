@@ -1,3 +1,9 @@
+Made implementation more consistent with paper, and removed re-normalisation of the
+data during runs as I believe this may have lead to the penalty parameter not being set/updated
+properly. Also cross-referenced with original implementation do double check nothing had
+been changed accidentally. 
+
+``` 
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -385,3 +391,4 @@ for(x in 1:100) {
   out <- new_auglag(gsbpprob, B, equal=c(0,1,1), fhat=TRUE, urate=1, slack=2, ncandf=ncandf, start=10, end=150)
   write_json(out, glue("results/gsbp/slack_al_optim_fully_consistent/data/run_{x}_results.json"), digits=NA)
 }
+```
