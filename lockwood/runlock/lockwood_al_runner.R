@@ -6,6 +6,8 @@ library(glue)
 library(R.utils)
 library(tgp)
 
+source('runlock.R')
+
 new_rho_update <- function (obj, C, equal, init = 10, ethresh = 0.01)
 {
     if (init > length(obj))
@@ -50,6 +52,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
   ## get initial designwhich.min
   X <- dopt.gp(start, Xcand=lhs(10*start, B))$XX
+  ## X <- lhs(start, B)
   X <- rbind(Xstart, X)
   start <- nrow(X)
 
@@ -119,7 +122,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
   for(j in 1:nc) {
     if(j %in% cknown) { Cnorm[j] <- 1; Cgpi[j] <- -1 }
     else {
-      Cnorm[j] <- 1
+      Cnorm[j] <- max(abs(C[,j]))
       Cgpi[j] <- newM(X, C[,j]/Cnorm[j], dg.start[1], dg.start[2])
       d[j,] <- mleM(Cgpi[j], param="d", tmin=dlim[1], tmax=dlim[2], ab=ab,
                     verb=verb-1)$d
@@ -129,7 +132,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
   ## possibly initialize objective surrogate
   if(fhat) {
-    fnorm <- 1
+    fnorm <- max(abs(obj))
     fgpi <- newM(X, obj/fnorm, dg.start[1], dg.start[2])
     df <- mleM(fgpi, param="d", tmin=dlim[1], tmax=dlim[2], ab=ab, verb=verb-1)$d
     dfs <- matrix(df, nrow=1)
@@ -154,9 +157,19 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
       Cm <- pmax(C, Ce)
       al <- obj + C %*% lambda + Cm^2 %*% rep(1/(2*rho), nc)
 
-      ck <- C[which.min(al),]
-      lambda.new <- pmax(0, lambda + (1/rho) * ck)  # Probably shouldn't enforce non-negativity of equality Lagrange multipliers, but not running this on equality problems
-      if(any(ck[!equal] > 0) || any(abs(ck[equal]) > ethresh)) rho.new <- rho/2 else rho.new <- rho
+      if(!is.finite(m2)) { ## update if no valid has been found
+        lambda.new <- rep(0, length=ncol(C))
+        rho.new <- rho/2
+        # rho.new <- auto.rho(obj, C, equal)
+        # if(rho.new >= rho) rho.new <- 9*rho/10
+        # else if(rho.new < rho/2) rho.new <- rho/2
+
+      } else { ## update if any valid has been found
+        ck <- C[which.min(al),]
+        lambda.new <- pmax(0, lambda + (1/rho) * ck)
+        if(any(ck[!equal] > 0) || any(abs(ck[equal]) > ethresh)) rho.new <- rho/2
+        else rho.new <- rho
+      }
 
     } else {  ## Slack Variable AL
       S <- pmax(- C - rho*matrix(rep(lambda, nrow(C)), nrow=nrow(C), byrow=TRUE), 0)
@@ -165,8 +178,22 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
       al <- obj + Cm %*% lambda + Cm^2 %*% rep(1/(2*rho), nc)
       cmk <- Cm[which.min(al),]
 
-      lambda.new <- lambda + (1/rho) * cmk
-      if(any(cmk[!equal] > 0) || any(abs(cmk[equal]) > ethresh)) rho.new <- rho/2 else rho.new <- rho
+      if(!is.finite(m2)) { ## update if no valid has been found
+        ## same as in non-slack case above
+        lambda.new <- rep(0, length=ncol(C))
+        rho.new <- rho/2
+        # ## lambda.new <- lambda + (1/rho) * cmk
+        # rho.new <- auto.rho(obj, C, equal)
+        # ## rho.new <- auto.rho(obj, Cm)
+        # if(rho.new >= rho) rho.new <- 9*rho/10
+        # else if(rho.new < rho/2) rho.new <- rho/2
+      } else { ## update if any valid has been found
+        ## specific to slack variable case
+        lambda.new <- lambda + (1/rho) * cmk
+        ## if(mean(cmk^2) > quantile(rowMeans(Cm^2), p=0.05)) rho.new <- rho/2
+        if(any(cmk[!equal] > 0) || any(abs(cmk[equal]) > ethresh)) rho.new <- rho/2
+        else rho.new <- rho
+      }
     }
 
     ## printing progress
@@ -195,9 +222,9 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     ## rebuild surrogates periodically under new normalized responses
     if(t > (start+1) && (t %% urate == 0)) {
 
-      one_fn <- function(t) { 1 }
       ## constraint surrogates
-      Cnorm <- apply(abs(C), 2, one_fn)  # Extreme hack but it does the job :)
+      Cnorm <- apply(abs(C), 2, max)
+      print(glue("New Norm: {Cnorm}"))
       for(j in 1:nc) {
         if(j %in% cknown) next;
         deleteM(Cgpi[j])
@@ -212,7 +239,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
       ## possible objective surrogate
       if(fhat) {
         deleteM(fgpi)
-        fnorm <- 1
+        fnorm <- max(abs(obj))
         df[df < dlim[1]] <- 10*dlim[1]
         df[df > dlim[2]] <- dlim[2]/10
         fgpi <- newM(X, obj/fnorm, df, dg.start[2])
@@ -220,6 +247,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
                    verb=verb-1)$d
         dfs <- rbind(dfs, df)
       } else { df <- NULL }
+
       new.params <- FALSE
     }
 
@@ -328,24 +356,16 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     lambda=as.matrix(lambdas), rho=as.numeric(rhos)))
 }
 
-## toy function returning linear objective evaluations and
-## non-linear constraints
-aimprob <- function(X, known.only = FALSE)
-{
-  if(is.null(nrow(X))) X <- matrix(X, nrow=1)
-  f <- rowSums(X)
-  if(known.only) return(list(obj=f))
-  c1 <- 1.5-X[,1]-2*X[,2]-0.5*sin(2*pi*(X[,1]^2-2*X[,2]))
-  c2 <- rowSums(X^2)-1.5
-  return(list(obj=f, c=cbind(c1,c2)))
-}
-
 ## set bounding rectangle for adaptive sampling
-B <- matrix(c(rep(0,2),rep(1,2)),ncol=2)
+B <- matrix(c(rep(0,6), rep(2,6)), ncol=2)
 
-for(x in 1:100) {
+ncandf <- function(t) { 1000 }
+
+optim.auglag()
+
+for(x in 20:30) {
   ## run ALBO
   set.seed(42+x)
-  out <- new_auglag(aimprob, B, start=5, end=50, slack=2, fhat=TRUE, lambda=0, urate=1)
-  write_json(out, glue("results/lsq/slack_al_optim_fully_consistent/data/run_{x}_results.json"), digits=NA)
+  out <- new_auglag(runlock, B, Bscale=10000, start=30, end=510, slack=2, fhat=FALSE, lambda=0, urate=1)
+  write_json(out, glue("../../results/lockwood/slack_optim/data/run_{x}_results.json"), digits=NA)
 }

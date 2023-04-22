@@ -1,2 +1,5 @@
 .idea/
-/lockwood/
+lockwood/*
+!lockwood/runlock
+lockwood/runlock/*
+!lockwood/runlock/lockwood_al_runner.R
