@@ -3,3 +3,4 @@ lockwood/*
 !lockwood/runlock
 lockwood/runlock/*
 !lockwood/runlock/lockwood_al_runner.R
+!lockwood/runlock/runlock.R
