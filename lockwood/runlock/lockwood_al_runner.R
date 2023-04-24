@@ -227,10 +227,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
     ## random candidate grid
     ncand <- ncandf(t)
-    if(!is.finite(m2) || fhat)
-      XX <- lhs(ncand, B)
-    else XX <- laGP:::rbetter(ncand, B, sum(X[which(obj == m2)[1],]))
-    ## NOTE: might be a version of rbetter for fhat
+    XX <- lhs(ncand, B)  # Always select samples using LHS (previously was specialising in case of known linear objective)
 
     ## calculate composite surrogate, and evaluate EI and/or EY
     eyei <- alM(XX, fgpi, fnorm, Cgpi, Cnorm, lambda, 1/(2*rho), ybest,
@@ -238,11 +235,9 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     eis <- eyei$ei; by <- "ei"
     mei <- max(eis)
     nzei <- sum(eis > 0)
-    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }
+    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }  # Switch to EY, think it's mentioned in original paper
     else if(nzei <= 0.1*ncand) {
-      if(!is.finite(m2) || fhat)
-        XX <- rbind(XX, lhs(10*ncand, B))
-      else XX <- rbind(XX, laGP:::rbetter(10*ncand, B, sum(X[which(obj == m2)[1],])))
+      XX <- rbind(XX, lhs(10*ncand, B))
       eyei <- alM(XX[-(1:ncand),], fgpi, fnorm, Cgpi, Cnorm, lambda, 1/(2*rho), ybest,
                 slack, equal, N, fn, Bscale)
       eis <- c(eis, eyei$ei)
@@ -333,13 +328,11 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 ## set bounding rectangle for adaptive sampling
 B <- matrix(c(rep(0,6), rep(2,6)), ncol=2)
 
-ncandf <- function(t) { 1000 }
-
-optim.auglag()
+ncandf <- function(t) { 6000 }
 
 for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)
-  out <- new_auglag(runlock, B, Bscale=1, start=30, end=510, slack=FALSE, fhat=FALSE, lambda=0, urate=1)
-  write_json(out, glue("../../results/lockwood/no_slack_fully_consistent/data/run_{x}_results.json"), digits=NA)
+  out <- new_auglag(runlock, B, Bscale=1, start=30, end=510, slack=FALSE, fhat=FALSE, lambda=0, urate=1, ncandf = ncandf)
+  write_json(out, glue("../../results/lockwood/no_slack_fully_consistent_6000_initial_samples/data/run_{x}_results.json"), digits=NA)
 }

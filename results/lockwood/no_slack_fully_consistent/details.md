@@ -340,8 +340,6 @@ B <- matrix(c(rep(0,6), rep(2,6)), ncol=2)
 
 ncandf <- function(t) { 1000 }
 
-optim.auglag()
-
 for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)

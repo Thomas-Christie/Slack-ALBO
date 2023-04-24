@@ -1,3 +1,7 @@
+No-slack AL run on Lockwood problem using 6000 initial samples for optimising EI function (was previously using 1000).
+
+Also noticed that there was some optimising of sampling in the case of a known linear objective, which I removed.
+``` 
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -5,6 +9,8 @@ library(jsonlite)
 library(glue)
 library(R.utils)
 library(tgp)
+
+source('runlock.R')
 
 new_rho_update <- function (obj, C, equal, init = 10, ethresh = 0.01)
 {
@@ -225,10 +231,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
     ## random candidate grid
     ncand <- ncandf(t)
-    if(!is.finite(m2) || fhat)
-      XX <- lhs(ncand, B)
-    else XX <- laGP:::rbetter(ncand, B, sum(X[which(obj == m2)[1],]))
-    ## NOTE: might be a version of rbetter for fhat
+    XX <- lhs(ncand, B)  # Always select samples using LHS (previously was specialising in case of known linear objective)
 
     ## calculate composite surrogate, and evaluate EI and/or EY
     eyei <- alM(XX, fgpi, fnorm, Cgpi, Cnorm, lambda, 1/(2*rho), ybest,
@@ -236,11 +239,9 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     eis <- eyei$ei; by <- "ei"
     mei <- max(eis)
     nzei <- sum(eis > 0)
-    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }
+    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }  # Switch to EY, think it's mentioned in original paper
     else if(nzei <= 0.1*ncand) {
-      if(!is.finite(m2) || fhat)
-        XX <- rbind(XX, lhs(10*ncand, B))
-      else XX <- rbind(XX, laGP:::rbetter(10*ncand, B, sum(X[which(obj == m2)[1],])))
+      XX <- rbind(XX, lhs(10*ncand, B))
       eyei <- alM(XX[-(1:ncand),], fgpi, fnorm, Cgpi, Cnorm, lambda, 1/(2*rho), ybest,
                 slack, equal, N, fn, Bscale)
       eis <- c(eis, eyei$ei)
@@ -328,60 +329,15 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     lambda=as.matrix(lambdas), rho=as.numeric(rhos)))
 }
 
-goldstein.price <- function(X)
-{
-    if(is.null(nrow(X))) X <- matrix(X, nrow=1)
-    m <- 8.6928
-    s <- 2.4269
-    x1 <- 4 * X[,1] - 2
-    x2 <- 4 * X[,2] - 2
-    a <- 1 + (x1 + x2 + 1)^2 * (19 - 14 * x1 + 3 * x1^2 - 14 *
-        x2 + 6 * x1 * x2 + 3 * x2^2)
-    b <- 30 + (2 * x1 - 3 * x2)^2 * (18 - 32 * x1 + 12 * x1^2 +
-        48 * x2 - 36 * x1 * x2 + 27 * x2^2)
-    f <- log(a * b)
-    f <- (f - m)/s
-    return(f)
-}
+## set bounding rectangle for adaptive sampling
+B <- matrix(c(rep(0,6), rep(2,6)), ncol=2)
 
-toy.c1 <- function(X) {
-  if (is.null(dim(X))) X <- matrix(X, nrow=1)
-  c1 <- 3/2 - X[,1] - 2*X[,2] - 0.5*sin(2*pi*(X[,1]^2 - 2*X[,2]))
-  return(cbind(c1, -apply(X, 1, branin) + 25))
-}
+ncandf <- function(t) { 6000 }
 
-parr <- function(X){
-  if (is.null(dim(X))) X <- matrix(X, nrow=1)
-  x1 <- (2 * X[,1] - 1)
-  x2 <- (2 * X[,2] - 1)
-  g <- (4-2.1*x1^2+1/3*x1^4)*x1^2 + x1*x2 + (-4+4*x2^2)*x2^2+3*sin(6*(1-x1)) + 3*sin(6*(1-x2))
-  return(-g+6)
-}
-
-gsbp.constraints <- function(x){
-  return(cbind(toy.c1(x), parr(x)-2))
-}
-
-## problem definition for AL
-gsbpprob <- function(X, known.only=FALSE)
-{
-  if(is.null(nrow(X))) X <- matrix(X, nrow=1)
-  if(known.only) stop("known.only not supported for this example")
-  f <- goldstein.price(X)
-  C <- gsbp.constraints(X)
-  return(list(obj=f, c=cbind(C[,1], C[,2]/100, C[,3]/10))) # Dividing by these constants isn't mentioned in Picheny et al. (https://arxiv.org/pdf/1605.09466.pdf)
-}
-
-## set bounding rectangle for acquisitions
-dim <- 2
-
-B <- matrix(c(rep(0,dim),rep(1,dim)),ncol=2)
-
-ncandf <- function(t) { 1000 }
-
-for(x in 1:100) {
+for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)
-  out <- new_auglag(gsbpprob, B, equal=c(0,1,1), fhat=TRUE, urate=1, slack=2, ncandf=ncandf, start=10, end=150)
-  write_json(out, glue("results/gsbp/slack_al_optim_fully_consistent/data/run_{x}_results.json"), digits=NA)
+  out <- new_auglag(runlock, B, Bscale=1, start=30, end=510, slack=FALSE, fhat=FALSE, lambda=0, urate=1, ncandf = ncandf)
+  write_json(out, glue("../../results/lockwood/no_slack_fully_consistent_6000_initial_samples/data/run_{x}_results.json"), digits=NA)
 }
+```
