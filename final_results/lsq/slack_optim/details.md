@@ -1,3 +1,6 @@
+Ran Slack-AL + Optim on LSQ.
+
+``` 
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -336,3 +339,5 @@ for(x in 1:100) {
   out <- new_auglag(aimprob, B, start=5, end=45, slack=2, fhat=TRUE, lambda=0, urate=1, ncandf = ncandf)
   write_json(out, glue("final_results/lsq/slack_optim/data/run_{x}_results.json"), digits=NA)
 }
+
+```
