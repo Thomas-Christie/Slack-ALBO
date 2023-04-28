@@ -369,6 +369,7 @@ B <- matrix(c(rep(0,dim),rep(1,dim)),ncol=2)
 
 ncandf <- function(t) {5000}
 
+# NOTE - Code above is currently configured for *conservative* reduction of penalty parameter.
 for(x in 1:50) {
   ## run ALBO
   set.seed(42+x)
