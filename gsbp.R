@@ -225,10 +225,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
     ## random candidate grid
     ncand <- ncandf(t)
-    if(!is.finite(m2) || fhat)
-      XX <- lhs(ncand, B)
-    else XX <- laGP:::rbetter(ncand, B, sum(X[which(obj == m2)[1],]))
-    ## NOTE: might be a version of rbetter for fhat
+    XX <- lhs(ncand, B)  # Always select samples using LHS (previously was specialising in case of known linear objective)
 
     ## calculate composite surrogate, and evaluate EI and/or EY
     eyei <- alM(XX, fgpi, fnorm, Cgpi, Cnorm, lambda, 1/(2*rho), ybest,
@@ -236,19 +233,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     eis <- eyei$ei; by <- "ei"
     mei <- max(eis)
     nzei <- sum(eis > 0)
-    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }
-    else if(nzei <= 0.1*ncand) {
-      if(!is.finite(m2) || fhat)
-        XX <- rbind(XX, lhs(10*ncand, B))
-      else XX <- rbind(XX, laGP:::rbetter(10*ncand, B, sum(X[which(obj == m2)[1],])))
-      eyei <- alM(XX[-(1:ncand),], fgpi, fnorm, Cgpi, Cnorm, lambda, 1/(2*rho), ybest,
-                slack, equal, N, fn, Bscale)
-      eis <- c(eis, eyei$ei)
-      nzei <- nzei + sum(eis > 0)
-      if(nzei <= ey.tol*ncand) stop("not sure")
-      ncand <- ncand + 10*ncand
-      mei <- max(eis)
-    }
+    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }  # Switch to EY, mentioned in original paper
     meis <- c(meis, mei)
 
     ## plot progress
@@ -377,7 +362,7 @@ dim <- 2
 
 B <- matrix(c(rep(0,dim),rep(1,dim)),ncol=2)
 
-ncandf <- function(t) { 1000 }
+ncandf <- function(t) { 5000 }
 
 for(x in 1:100) {
   ## run ALBO

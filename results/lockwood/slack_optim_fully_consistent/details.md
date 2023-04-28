@@ -2,6 +2,8 @@ Ran slack-optim AL on Lockwood problem with no re-scaling of objective
 and constraint function; these are scaled into sensible ranges in the 
 `runlock.R` wrapper now.
 
+NOTE: Still uses `rbetter` function here.
+
 ``` 
 library(laGP)
 library(DiceKriging)

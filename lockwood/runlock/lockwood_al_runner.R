@@ -235,17 +235,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     eis <- eyei$ei; by <- "ei"
     mei <- max(eis)
     nzei <- sum(eis > 0)
-    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }  # Switch to EY, think it's mentioned in original paper
-    else if(nzei <= 0.1*ncand) {
-      XX <- rbind(XX, lhs(10*ncand, B))
-      eyei <- alM(XX[-(1:ncand),], fgpi, fnorm, Cgpi, Cnorm, lambda, 1/(2*rho), ybest,
-                slack, equal, N, fn, Bscale)
-      eis <- c(eis, eyei$ei)
-      nzei <- nzei + sum(eis > 0)
-      if(nzei <= ey.tol*ncand) stop("not sure")
-      ncand <- ncand + 10*ncand
-      mei <- max(eis)
-    }
+    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }  # Switch to EY, mentioned in original paper
     meis <- c(meis, mei)
 
     ## plot progress
