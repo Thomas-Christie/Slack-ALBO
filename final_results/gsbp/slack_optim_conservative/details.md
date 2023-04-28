@@ -1,3 +1,7 @@
+Ran Slack-AL + Optim on GSBP, with conservative penalty reduction when no valid solution
+has been found yet.
+
+``` 
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -375,3 +379,4 @@ for(x in 1:50) {
   out <- new_auglag(gsbpprob, B, equal=c(0,1,1), fhat=TRUE, lambda=0, urate=1, slack=2, ncandf=ncandf, start=10, end=150)
   write_json(out, glue("final_results/gsbp/slack_optim_conservative/data/run_{x}_results.json"), digits=NA)
 }
+```
