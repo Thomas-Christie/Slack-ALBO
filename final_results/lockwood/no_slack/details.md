@@ -1,3 +1,6 @@
+Ran EI-AL with no slack on Lockwood problem for final time.
+
+``` 
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -326,3 +329,4 @@ for(x in 1:30) {
   out <- new_auglag(runlock, B, Bscale=1, start=30, end=400, slack=FALSE, fhat=FALSE, lambda=0, urate=1, ncandf = ncandf)
   write_json(out, glue("../../final_results/lockwood/no_slack/data/run_{x}_results.json"), digits=NA)
 }
+```
