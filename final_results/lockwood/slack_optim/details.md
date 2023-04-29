@@ -1,3 +1,10 @@
+Ran EI-AL with slack + optimisation with L-BFGS-B on Lockwood problem for final time.
+
+NOTE - Stopped after 20 runs as we're only running our implementation for 20 runs in
+the interest of time; the differences between methods are already apparent with this 
+number of trials.
+
+``` 
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -326,3 +333,4 @@ for(x in 1:30) {
   out <- new_auglag(runlock, B, Bscale=1, start=30, end=400, slack=2, fhat=FALSE, lambda=0, urate=1, ncandf = ncandf)
   write_json(out, glue("../../final_results/lockwood/slack_optim/data/run_{x}_results.json"), digits=NA)
 }
+```
