@@ -1,3 +1,6 @@
+Ran EI-AL with slack + optimisation with L-BFGS-B on Lockwood problem, with no resorting to EY.
+
+``` 
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -5,6 +8,8 @@ library(jsonlite)
 library(glue)
 library(R.utils)
 library(tgp)
+
+source('runlock.R')
 
 new_rho_update <- function (obj, C, equal, init = 10, ethresh = 0.01)
 {
@@ -313,26 +318,15 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     lambda=as.matrix(lambdas), rho=as.numeric(rhos)))
 }
 
-## toy function returning linear objective evaluations and
-## non-linear constraints
-aimprob <- function(X, known.only = FALSE)
-{
-  if(is.null(nrow(X))) X <- matrix(X, nrow=1)
-  f <- rowSums(X)
-  if(known.only) return(list(obj=f))
-  c1 <- 1.5-X[,1]-2*X[,2]-0.5*sin(2*pi*(X[,1]^2-2*X[,2]))
-  c2 <- rowSums(X^2)-1.5
-  return(list(obj=f, c=cbind(c1,c2)))
-}
-
 ## set bounding rectangle for adaptive sampling
-B <- matrix(c(rep(0,2),rep(1,2)),ncol=2)
+B <- matrix(c(rep(0,6), rep(2,6)), ncol=2)
 
-ncandf <- function(t) {5000}
+ncandf <- function(t) {6000}
 
-for(x in 1:100) {
+for(x in 1:20) {
   ## run ALBO
   set.seed(42+x)
-  out <- new_auglag(aimprob, B, start=5, end=45, slack=2, fhat=TRUE, lambda=0, urate=1, ncandf = ncandf)
-  write_json(out, glue("final_results/lsq/slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
+  out <- new_auglag(runlock, B, Bscale=1, start=30, end=400, slack=2, fhat=FALSE, lambda=0, urate=1, ncandf = ncandf)
+  write_json(out, glue("../../final_results/lockwood/slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
 }
+```

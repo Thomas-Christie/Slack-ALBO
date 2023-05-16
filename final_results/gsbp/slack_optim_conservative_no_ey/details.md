@@ -1,3 +1,6 @@
+Ran Slack-AL + Optim on GSBP, with conservative penalty reduction, and no resorting to EY.
+
+``` 
 library(laGP)
 library(DiceKriging)
 library(DiceOptim)
@@ -166,7 +169,12 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
       cmk <- Cm[which.min(al),]
 
       lambda.new <- lambda + (1/rho) * cmk
-      if(any(cmk[!equal] > 0) || any(abs(cmk[equal]) > ethresh)) rho.new <- rho/2 else rho.new <- rho
+      if(!is.finite(m2)) { ## update if no valid has been found
+        print("CONSERVATIVE")
+        rho.new <- 9*rho/10
+      } else { ## update if any valid has been found
+        if(any(cmk[!equal] > 0) || any(abs(cmk[equal]) > ethresh)) rho.new <- rho/2 else rho.new <- rho
+      }
     }
 
     ## printing progress
@@ -313,26 +321,62 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     lambda=as.matrix(lambdas), rho=as.numeric(rhos)))
 }
 
-## toy function returning linear objective evaluations and
-## non-linear constraints
-aimprob <- function(X, known.only = FALSE)
+goldstein.price <- function(X)
 {
-  if(is.null(nrow(X))) X <- matrix(X, nrow=1)
-  f <- rowSums(X)
-  if(known.only) return(list(obj=f))
-  c1 <- 1.5-X[,1]-2*X[,2]-0.5*sin(2*pi*(X[,1]^2-2*X[,2]))
-  c2 <- rowSums(X^2)-1.5
-  return(list(obj=f, c=cbind(c1,c2)))
+    if(is.null(nrow(X))) X <- matrix(X, nrow=1)
+    m <- 8.6928
+    s <- 2.4269
+    x1 <- 4 * X[,1] - 2
+    x2 <- 4 * X[,2] - 2
+    a <- 1 + (x1 + x2 + 1)^2 * (19 - 14 * x1 + 3 * x1^2 - 14 *
+        x2 + 6 * x1 * x2 + 3 * x2^2)
+    b <- 30 + (2 * x1 - 3 * x2)^2 * (18 - 32 * x1 + 12 * x1^2 +
+        48 * x2 - 36 * x1 * x2 + 27 * x2^2)
+    f <- log(a * b)
+    f <- (f - m)/s
+    return(f)
 }
 
-## set bounding rectangle for adaptive sampling
-B <- matrix(c(rep(0,2),rep(1,2)),ncol=2)
+toy.c1 <- function(X) {
+  if (is.null(dim(X))) X <- matrix(X, nrow=1)
+  c1 <- 3/2 - X[,1] - 2*X[,2] - 0.5*sin(2*pi*(X[,1]^2 - 2*X[,2]))
+  return(cbind(c1, -apply(X, 1, branin) + 25))
+}
+
+parr <- function(X){
+  if (is.null(dim(X))) X <- matrix(X, nrow=1)
+  x1 <- (2 * X[,1] - 1)
+  x2 <- (2 * X[,2] - 1)
+  g <- (4-2.1*x1^2+1/3*x1^4)*x1^2 + x1*x2 + (-4+4*x2^2)*x2^2+3*sin(6*(1-x1)) + 3*sin(6*(1-x2))
+  return(-g+6)
+}
+
+gsbp.constraints <- function(x){
+  return(cbind(toy.c1(x), parr(x)-2))
+}
+
+## problem definition for AL
+gsbpprob <- function(X, known.only=FALSE)
+{
+  if(is.null(nrow(X))) X <- matrix(X, nrow=1)
+  if(known.only) stop("known.only not supported for this example")
+  f <- goldstein.price(X)
+  C <- gsbp.constraints(X)
+  return(list(obj=f, c=cbind(C[,1], C[,2]/100, C[,3]/10))) # Dividing by these constants isn't mentioned in Picheny et al. (https://arxiv.org/pdf/1605.09466.pdf)
+}
+
+## set bounding rectangle for acquisitions
+dim <- 2
+
+B <- matrix(c(rep(0,dim),rep(1,dim)),ncol=2)
 
 ncandf <- function(t) {5000}
 
-for(x in 1:100) {
+# NOTE - Code above is currently configured for *conservative* reduction of penalty parameter.
+for(x in 1:50) {
   ## run ALBO
   set.seed(42+x)
-  out <- new_auglag(aimprob, B, start=5, end=45, slack=2, fhat=TRUE, lambda=0, urate=1, ncandf = ncandf)
-  write_json(out, glue("final_results/lsq/slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
+  out <- new_auglag(gsbpprob, B, equal=c(0,1,1), fhat=TRUE, lambda=0, urate=1, slack=2, ncandf=ncandf, start=10, end=150)
+  write_json(out, glue("final_results/gsbp/slack_optim_conservative_no_ey/data/run_{x}_results.json"), digits=NA)
 }
+```

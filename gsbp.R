@@ -238,7 +238,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     eis <- eyei$ei; by <- "ei"
     mei <- max(eis)
     nzei <- sum(eis > 0)
-    if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }  # Switch to EY, mentioned in original paper
+    # if(nzei <= ey.tol*ncand) { eis <- -(eyei$ey); by <- "ey"; mei <- Inf }  # Switch to EY, mentioned in original paper
     meis <- c(meis, mei)
 
     ## plot progress
@@ -374,5 +374,5 @@ for(x in 1:50) {
   ## run ALBO
   set.seed(42+x)
   out <- new_auglag(gsbpprob, B, equal=c(0,1,1), fhat=TRUE, lambda=0, urate=1, slack=2, ncandf=ncandf, start=10, end=150)
-  write_json(out, glue("final_results/gsbp/slack_optim_conservative/data/run_{x}_results.json"), digits=NA)
+  write_json(out, glue("final_results/gsbp/slack_optim_conservative_no_ey/data/run_{x}_results.json"), digits=NA)
 }
