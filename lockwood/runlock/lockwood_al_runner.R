@@ -324,5 +324,5 @@ for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)
   out <- new_auglag(runlock, B, Bscale=1, start=30, end=400, slack=TRUE, fhat=FALSE, lambda=0, urate=1, ncandf = ncandf)
-  write_json(out, glue("../../final_results/lockwood/slack_no_optim_no_ey/data/run_{x}_results.json"), digits=NA)
+  write_json(out, glue("../../final_results/lockwood/slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
 }
