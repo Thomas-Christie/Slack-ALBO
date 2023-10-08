@@ -4,3 +4,11 @@ lockwood/*
 lockwood/runlock/*
 !lockwood/runlock/lockwood_al_runner.R
 !lockwood/runlock/runlock.R
+
+mazda/*
+!mazda/Mazda_CdMOBP
+mazda/Mazda_CdMOBP/*
+!mazda/Mazda_CdMOBP/src
+mazda/Mazda_CdMOBP/src/*
+!mazda/Mazda_CdMOBP/src/mazda_al_runner.R
+!mazda/Mazda_CdMOBP/src/runmazda.R
