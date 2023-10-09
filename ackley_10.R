@@ -360,7 +360,6 @@ ncandf <- function(t) {5000}
 for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)
-  optim.auglag()
   out <- new_auglag(ackleyprob, B, start=10, end=200, slack=2, fhat=TRUE, lambda=0, urate=1, ncandf = ncandf)
   write_json(out, glue("final_results/ackley_10/slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
 }

@@ -320,6 +320,7 @@ B <- matrix(c(rep(0,222), rep(2,222)), ncol=2)
 
 ncandf <- function(t) {5000}
 
+# TODO: Double check constraint evaluations (i.e. are returned values getting negated)
 for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)
