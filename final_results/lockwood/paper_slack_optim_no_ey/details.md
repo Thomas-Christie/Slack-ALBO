@@ -1,4 +1,4 @@
-Slack + Optim on Keane30
+Reduced number of candidates when optimising to 3000 as with other experiments for paper.
 
 ```
 library(laGP)
@@ -8,8 +8,8 @@ library(jsonlite)
 library(glue)
 library(R.utils)
 library(tgp)
-library(wordspace)
-library(matrixStats)
+
+source('runlock.R')
 
 new_rho_update <- function (obj, C, equal, init = 10, ethresh = 0.01)
 {
@@ -318,58 +318,15 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
     lambda=as.matrix(lambdas), rho=as.numeric(rhos)))
 }
 
-
-# Keane30 constraint one
-keane30.c1 <- function(X) {
-  if (is.null(dim(X))) X <- matrix(X, nrow=1)
-  X <- 10.0 * X
-  constraint <- (0.75 - rowProds(X))
-  constraint <- (sign(constraint) * log(abs(constraint) + 1)) / 10.0
-  return(constraint)
-} 
-
-# Keane30 constraint two
-keane30.c2 <- function(X) {
-  if (is.null(dim(X))) X <- matrix(X, nrow=1)
-  X <- 10.0 * X
-  constraint <- (rowSums(X) - 7.5 * 30)
-  constraint <- (sign(constraint) * log(abs(constraint) + 1))
-  return(constraint)
-}
-
-# Keane30 objective
-keane30.objective <- function(X) {
-  if (is.null(dim(X))) X <- matrix(X, nrow=1)
-  X <- 10.0 * X
-  numerator <- rowSums(cos(X)^4) - 2.0 * rowProds(cos(X)^2)
-  denominator <- sqrt(rowSums(sweep(X^2, MARGIN = 2, c(1:30), FUN = "*")))
-  objective <- (-1.0 * abs(numerator / denominator)) / 0.1
-  return(objective)
-}
-
-keane30.constraints <- function(x){
-  return(cbind(keane30.c1(x), keane30.c2(x)))
-}
-
-keane30prob <- function(X, known.only=FALSE)
-{
-  if(is.null(nrow(X))) X <- matrix(X, nrow=1)
-  if(known.only) stop("known.only not supported for this example")
-  f <- keane30.objective(X)
-  C <- keane30.constraints(X)
-  return(list(obj=f, c=cbind(C[,1], C[,2])))
-}
-
 ## set bounding rectangle for adaptive sampling
-B <- matrix(c(rep(0,30), rep(1,30)),ncol=2)
+B <- matrix(c(rep(0,6), rep(2,6)), ncol=2)
 
-ncandf <- function(t) {5000}
+ncandf <- function(t) {3000}
 
 for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)
-  out <- new_auglag(keane30prob, B, start=100, end=2000, slack=2, fhat=TRUE, lambda=0, urate=50, ncandf = ncandf)
-  write_json(out, glue("final_results/keane_30/slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
+  out <- new_auglag(runlock, B, Bscale=1, start=30, end=400, slack=2, fhat=FALSE, lambda=0, urate=1, ncandf = ncandf)
+  write_json(out, glue("../../final_results/lockwood/paper_slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
 }
-
 ```

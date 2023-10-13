@@ -318,11 +318,11 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 ## set bounding rectangle for adaptive sampling
 B <- matrix(c(rep(0,6), rep(2,6)), ncol=2)
 
-ncandf <- function(t) {6000}
+ncandf <- function(t) {3000}
 
-for(x in 21:30) {
+for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)
   out <- new_auglag(runlock, B, Bscale=1, start=30, end=400, slack=2, fhat=FALSE, lambda=0, urate=1, ncandf = ncandf)
-  write_json(out, glue("../../final_results/lockwood/slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
+  write_json(out, glue("../../final_results/lockwood/paper_slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
 }

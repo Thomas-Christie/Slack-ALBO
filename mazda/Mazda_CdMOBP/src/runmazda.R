@@ -9,6 +9,5 @@ runmazda <- function(x)
   system("./mazda_mop .")
   objectives = scan(file="pop_objs_eval.txt", quiet=TRUE)
   constraints = scan(file="pop_cons_eval.txt", quiet=TRUE)
-  print(objectives[1])
   return(list(obj=objectives[1], c = -1.0 * constraints))
 }
