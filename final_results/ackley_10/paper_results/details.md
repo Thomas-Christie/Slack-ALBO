@@ -201,7 +201,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
       one_fn <- function(t) { 1 }
       ## constraint surrogates
-      Cnorm <- apply(abs(C), 2, one_fn)  # Extreme hack but it does the job :)
+      Cnorm <- apply(abs(C), 2, one_fn)
       for(j in 1:nc) {
         if(j %in% cknown) next;
         deleteM(Cgpi[j])
@@ -364,7 +364,7 @@ for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)
   out <- new_auglag(ackleyprob, B, start=10, end=200, slack=2, fhat=TRUE, lambda=0, urate=1, ncandf = ncandf)
-  write_json(out, glue("final_results/ackley_10/slack_optim_no_ey/data/run_{x}_results.json"), digits=NA)
+  write_json(out, glue("final_results/ackley_10/paper_results/data/run_{x}_results.json"), digits=NA)
 }
 
 ```

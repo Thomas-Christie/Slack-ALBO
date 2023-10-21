@@ -199,7 +199,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
       one_fn <- function(t) { 1 }
       ## constraint surrogates
-      Cnorm <- apply(abs(C), 2, one_fn)  # Extreme hack but it does the job :)
+      Cnorm <- apply(abs(C), 2, one_fn)
       for(j in 1:nc) {
         if(j %in% cknown) next;
         deleteM(Cgpi[j])
@@ -320,7 +320,6 @@ B <- matrix(c(rep(0,222), rep(2,222)), ncol=2)
 
 ncandf <- function(t) {5000}
 
-# TODO: Double check constraint evaluations (i.e. are returned values getting negated)
 for(x in 1:30) {
   ## run ALBO
   set.seed(42+x)

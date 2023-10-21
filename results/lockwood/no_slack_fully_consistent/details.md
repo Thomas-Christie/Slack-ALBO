@@ -204,7 +204,7 @@ new_auglag <- function(fn, B, fhat=FALSE, equal=FALSE, ethresh=1e-2, slack=FALSE
 
       one_fn <- function(t) { 1 }
       ## constraint surrogates
-      Cnorm <- apply(abs(C), 2, one_fn)  # Extreme hack but it does the job :)
+      Cnorm <- apply(abs(C), 2, one_fn)
       for(j in 1:nc) {
         if(j %in% cknown) next;
         deleteM(Cgpi[j])

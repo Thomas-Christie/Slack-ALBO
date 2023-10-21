@@ -13,7 +13,6 @@ library(R.utils)
 
 new_rho_update <- function (obj, C, equal, init = 10, ethresh = 0.1)
 {
-    print("Thomas Code")
     if (init > length(obj))
         init <- length(obj)
     if (length(obj) != nrow(C))
